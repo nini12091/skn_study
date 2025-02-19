@@ -1,0 +1,58 @@
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+from urllib.request import urlretrieve
+import os
+os.makedirs('music_images', exist_ok=True)
+
+
+class musicsEntry:
+    def __init__(self, title, href, img_path, artist, albums):
+        self.title =title
+        self.href = href
+        self.img_path = img_path
+        self.artist = artist
+        self.albums = albums
+
+    def __repr__(self):
+        return f'NewsEntry<title={self.title}, href={self.href}, img_path={self.img_path}, artist={self.artist}, albums={self.albums}'
+    
+# 1. request -> url 요청
+url = "https://music.bugs.co.kr/chart"
+response = requests.get(url)
+
+
+# 2. html 응답
+html = response.text
+
+# 3. BeautifulSoup 객체 생성
+bs = BeautifulSoup(html, 'html.parser')
+
+# 4. li.bx 반복순회 > .newscontent > 두 번째 a 태그
+music_contents = bs.select("table.list tbody tr")
+# print(music_contents)
+
+music_list = []
+
+for i, music_content in enumerate(music_contents):
+    title_tag =music_content.select_one('p.title > a')
+    title = title_tag.text
+    img_tag = music_content.select_one('a.thumbnail > img')
+    img_lazysrc = img_tag['src']
+    if img_lazysrc.startswith("http"):
+        img_dir ="music_images"
+        today = datetime.now().strftime('%y%m%d')
+        filename = f'{img_dir}/{today}_{i}.jpg'
+        urlretrieve(img_lazysrc, filename)
+
+    art_tag = music_content.select_one('p.artist > a')
+    artist = art_tag.text
+
+    albums_tag = music_content.select_one('a.album')
+    albums = albums_tag.text
+
+    music_entry =musicsEntry(title, img_lazysrc, filename, artist, albums)
+    music_list.append(music_entry)
+
+for musics in music_list:
+    print(musics)
